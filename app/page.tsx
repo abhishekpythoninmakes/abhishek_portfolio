@@ -230,7 +230,29 @@ export default function Portfolio() {
   useEffect(() => {
     const savedData = localStorage.getItem("portfolioData")
     if (savedData) {
-      setProfileData(JSON.parse(savedData))
+      try {
+        const parsedData = JSON.parse(savedData)
+        // Ensure resume and auth objects exist
+        if (!parsedData.resume) {
+          parsedData.resume = {
+            enabled: true,
+            fileName: "Resume.pdf",
+            fileUrl: "/placeholder.pdf",
+            buttonText: "Download Resume",
+          }
+        }
+        if (!parsedData.auth) {
+          parsedData.auth = {
+            username: "abhishek",
+            password: "123",
+            passwordHint: "Your favorite number",
+          }
+        }
+        setProfileData(parsedData)
+      } catch (error) {
+        console.error("Error parsing saved data:", error)
+        setProfileData(initialData)
+      }
     }
 
     // Check if user is already authenticated
@@ -428,14 +450,14 @@ export default function Portfolio() {
             </div>
 
             <div className="flex items-center gap-3">
-              {profileData.resume.enabled && (
+              {profileData?.resume?.enabled && (
                 <Button
                   onClick={handleDownloadResume}
                   disabled={isDownloading}
                   className="bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg disabled:opacity-50"
                 >
                   <FileText className="w-4 h-4 mr-2" />
-                  {profileData.resume.buttonText}
+                  {profileData.resume.buttonText || "Download Resume"}
                 </Button>
               )}
 
@@ -478,7 +500,7 @@ export default function Portfolio() {
                   Get In Touch
                 </motion.a>
 
-                {profileData.resume.enabled && (
+                {profileData?.resume?.enabled && (
                   <motion.button
                     onClick={handleDownloadResume}
                     disabled={isDownloading}
@@ -487,7 +509,7 @@ export default function Portfolio() {
                     className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-full font-medium hover:shadow-lg transition-shadow disabled:opacity-50"
                   >
                     <Download className="w-5 h-5" />
-                    {profileData.resume.buttonText}
+                    {profileData.resume.buttonText || "Download Resume"}
                   </motion.button>
                 )}
 
