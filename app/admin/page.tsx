@@ -8,43 +8,84 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Plus, Trash2, Save, User, Briefcase, GraduationCap, Code, FolderOpen, X } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { toast } from "sonner"
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Save,
+  User,
+  Briefcase,
+  GraduationCap,
+  Code,
+  FolderOpen,
+  X,
+  LogOut,
+  FileText,
+  Shield,
+  Eye,
+  EyeOff,
+} from "lucide-react"
 
 interface AdminPanelProps {
   profileData: any
   onDataUpdate: (data: any) => void
   onClose: () => void
+  onLogout: () => void
 }
 
 const defaultProfileData = {
   name: "",
   title: "",
+  location: "",
   email: "",
   phone: "",
-  location: "",
-  profileImage: "",
   linkedin: "",
   github: "",
   summary: "",
+  profileImage: "",
   skills: [],
   projects: [],
   experience: [],
   education: [],
+  resume: {},
+  auth: {},
 }
 
-export default function AdminPanel({ profileData, onDataUpdate, onClose }: AdminPanelProps) {
+export default function AdminPanel({
+  profileData = defaultProfileData, // <-- fallback
+  onDataUpdate,
+  onClose,
+  onLogout,
+}: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState("profile")
-  const [formData, setFormData] = useState(profileData || defaultProfileData)
+  const [formData, setFormData] = useState(profileData)
   const [newSkill, setNewSkill] = useState("")
   const [newSkillCategory, setNewSkillCategory] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleSave = () => {
     onDataUpdate(formData)
-    alert("Data saved successfully!")
+    toast.success("Data saved successfully! 🎉")
   }
 
   const handleInputChange = (field: string, value: any) => {
     setFormData({ ...formData, [field]: value })
+  }
+
+  const handleResumeChange = (field: string, value: any) => {
+    setFormData({
+      ...formData,
+      resume: { ...formData.resume, [field]: value },
+    })
+  }
+
+  const handleAuthChange = (field: string, value: any) => {
+    setFormData({
+      ...formData,
+      auth: { ...formData.auth, [field]: value },
+    })
   }
 
   const addSkillCategory = () => {
@@ -134,10 +175,12 @@ export default function AdminPanel({ profileData, onDataUpdate, onClose }: Admin
 
   const tabs = [
     { id: "profile", label: "Profile", icon: User },
+    { id: "resume", label: "Resume", icon: FileText },
     { id: "skills", label: "Skills", icon: Code },
     { id: "projects", label: "Projects", icon: FolderOpen },
     { id: "experience", label: "Experience", icon: Briefcase },
     { id: "education", label: "Education", icon: GraduationCap },
+    { id: "security", label: "Security", icon: Shield },
   ]
 
   return (
@@ -158,13 +201,24 @@ export default function AdminPanel({ profileData, onDataUpdate, onClose }: Admin
             <h1 className="text-3xl font-bold text-white">Admin Panel</h1>
           </div>
 
-          <Button
-            onClick={handleSave}
-            className="bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:shadow-lg"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            Save Changes
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={handleSave}
+              className="bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:shadow-lg"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Save Changes
+            </Button>
+
+            <Button
+              onClick={onLogout}
+              variant="outline"
+              className="bg-red-500/20 border-red-400/50 text-red-400 hover:bg-red-500/30"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -283,6 +337,67 @@ export default function AdminPanel({ profileData, onDataUpdate, onClose }: Admin
                       className="bg-white/10 border-white/20 text-white min-h-[100px]"
                     />
                   </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Resume Tab */}
+          {activeTab === "resume" && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <Card className="bg-white/10 backdrop-blur-md border-white/20">
+                <CardHeader>
+                  <CardTitle className="text-white">Resume Configuration</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="resume-enabled"
+                      checked={formData.resume.enabled}
+                      onCheckedChange={(checked) => handleResumeChange("enabled", checked)}
+                    />
+                    <Label htmlFor="resume-enabled" className="text-white">
+                      Enable Resume Download
+                    </Label>
+                  </div>
+
+                  {formData.resume.enabled && (
+                    <>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-white">Button Text</Label>
+                          <Input
+                            value={formData.resume.buttonText}
+                            onChange={(e) => handleResumeChange("buttonText", e.target.value)}
+                            className="bg-white/10 border-white/20 text-white"
+                            placeholder="Download Resume"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-white">File Name</Label>
+                          <Input
+                            value={formData.resume.fileName}
+                            onChange={(e) => handleResumeChange("fileName", e.target.value)}
+                            className="bg-white/10 border-white/20 text-white"
+                            placeholder="Resume.pdf"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-white">Resume File URL</Label>
+                        <Input
+                          value={formData.resume.fileUrl}
+                          onChange={(e) => handleResumeChange("fileUrl", e.target.value)}
+                          className="bg-white/10 border-white/20 text-white"
+                          placeholder="/path/to/resume.pdf or https://example.com/resume.pdf"
+                        />
+                        <p className="text-white/60 text-sm mt-1">
+                          Upload your resume to the public folder or use an external URL
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
@@ -679,6 +794,66 @@ export default function AdminPanel({ profileData, onDataUpdate, onClose }: Admin
                       </div>
                     </div>
                   ))}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Security Tab */}
+          {activeTab === "security" && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <Card className="bg-white/10 backdrop-blur-md border-white/20">
+                <CardHeader>
+                  <CardTitle className="text-white">Security Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-white">Username</Label>
+                      <Input
+                        value={formData.auth.username}
+                        onChange={(e) => handleAuthChange("username", e.target.value)}
+                        className="bg-white/10 border-white/20 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-white">Password</Label>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          value={formData.auth.password}
+                          onChange={(e) => handleAuthChange("password", e.target.value)}
+                          className="bg-white/10 border-white/20 text-white pr-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white hover:bg-white/10 h-auto p-1"
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-white">Password Hint</Label>
+                    <Input
+                      value={formData.auth.passwordHint}
+                      onChange={(e) => handleAuthChange("passwordHint", e.target.value)}
+                      className="bg-white/10 border-white/20 text-white"
+                      placeholder="A hint to help you remember your password"
+                    />
+                  </div>
+
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                    <p className="text-yellow-400 text-sm">
+                      ⚠️ <strong>Security Notice:</strong> Make sure to use a strong password and keep your credentials
+                      secure. The password hint will be visible to anyone trying to log in.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>

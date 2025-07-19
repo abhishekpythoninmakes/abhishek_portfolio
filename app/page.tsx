@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Toaster } from "@/components/ui/sonner"
+import { toast } from "sonner"
 import {
   Github,
   Linkedin,
@@ -22,8 +25,11 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Download,
+  FileText,
 } from "lucide-react"
 import AdminPanel from "./admin/page"
+import LoginForm from "./components/login-form"
 
 // Types
 interface Project {
@@ -42,6 +48,19 @@ interface Skill {
   skills: string[]
 }
 
+interface ResumeConfig {
+  enabled: boolean
+  fileName: string
+  fileUrl: string
+  buttonText: string
+}
+
+interface AuthConfig {
+  username: string
+  password: string
+  passwordHint: string
+}
+
 interface ProfileData {
   name: string
   title: string
@@ -56,6 +75,8 @@ interface ProfileData {
   projects: Project[]
   experience: any[]
   education: any[]
+  resume: ResumeConfig
+  auth: AuthConfig
 }
 
 // Initial data
@@ -69,7 +90,18 @@ const initialData: ProfileData = {
   github: "github.com/abhishekpythoninmakes",
   summary:
     "Full Stack Python Django Developer with 2 years of professional experience. Skilled in developing web applications using Django and Flask frameworks. Proficient in implementing machine learning and deep learning solutions.",
-  profileImage: "/images/myimage.jpeg",
+  profileImage: "/placeholder.svg?height=400&width=400",
+  resume: {
+    enabled: true,
+    fileName: "Abhishek_AR_Resume.pdf",
+    fileUrl: "/placeholder.pdf",
+    buttonText: "Download Resume",
+  },
+  auth: {
+    username: "abhishek",
+    password: "123",
+    passwordHint: "Your favorite number",
+  },
   skills: [
     {
       category: "Programming Languages",
@@ -189,7 +221,10 @@ export default function Portfolio() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [showAdmin, setShowAdmin] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [activeSection, setActiveSection] = useState("home")
+  const [downloadProgress, setDownloadProgress] = useState(0)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -197,11 +232,80 @@ export default function Portfolio() {
     if (savedData) {
       setProfileData(JSON.parse(savedData))
     }
+
+    // Check if user is already authenticated
+    const authStatus = localStorage.getItem("isAuthenticated")
+    if (authStatus === "true") {
+      setIsAuthenticated(true)
+    }
   }, [])
 
   const handleDataUpdate = (newData: ProfileData) => {
     setProfileData(newData)
     localStorage.setItem("portfolioData", JSON.stringify(newData))
+  }
+
+  const handleLogin = (username: string, password: string) => {
+    if (username === profileData.auth.username && password === profileData.auth.password) {
+      setIsAuthenticated(true)
+      localStorage.setItem("isAuthenticated", "true")
+      return true
+    }
+    return false
+  }
+
+  const handleLogout = () => {
+    setIsAuthenticated(false)
+    localStorage.removeItem("isAuthenticated")
+    setShowAdmin(false)
+  }
+
+  const handleDownloadResume = async () => {
+    if (!profileData.resume.enabled || !profileData.resume.fileUrl) {
+      toast.error("Resume not available")
+      return
+    }
+
+    setIsDownloading(true)
+    setDownloadProgress(0)
+
+    // Simulate download progress
+    const progressInterval = setInterval(() => {
+      setDownloadProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(progressInterval)
+          return 100
+        }
+        return prev + Math.random() * 15
+      })
+    }, 200)
+
+    try {
+      // Simulate download delay
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      // Create download link
+      const link = document.createElement("a")
+      link.href = profileData.resume.fileUrl
+      link.download = profileData.resume.fileName
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      // Show success message
+      setTimeout(() => {
+        setIsDownloading(false)
+        setDownloadProgress(0)
+        toast.success("Thank you for connecting with me! 🎉", {
+          description: "Resume downloaded successfully",
+          duration: 4000,
+        })
+      }, 500)
+    } catch (error) {
+      setIsDownloading(false)
+      setDownloadProgress(0)
+      toast.error("Download failed. Please try again.")
+    }
   }
 
   const nextImage = () => {
@@ -224,12 +328,68 @@ export default function Portfolio() {
     }
   }
 
-  if (showAdmin) {
-    return <AdminPanel profileData={profileData} onDataUpdate={handleDataUpdate} onClose={() => setShowAdmin(false)} />
+  if (showAdmin && !isAuthenticated) {
+    return (
+      <LoginForm
+        onLogin={handleLogin}
+        onClose={() => setShowAdmin(false)}
+        passwordHint={profileData.auth.passwordHint}
+      />
+    )
+  }
+
+  if (showAdmin && isAuthenticated) {
+    return (
+      <AdminPanel
+        profileData={profileData}
+        onDataUpdate={handleDataUpdate}
+        onClose={() => setShowAdmin(false)}
+        onLogout={handleLogout}
+      />
+    )
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <Toaster position="top-right" />
+
+      {/* Download Progress Overlay */}
+      <AnimatePresence>
+        {isDownloading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 max-w-md w-full mx-4"
+            >
+              <div className="text-center">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                  className="w-16 h-16 mx-auto mb-4"
+                >
+                  <Download className="w-full h-full text-cyan-400" />
+                </motion.div>
+
+                <h3 className="text-xl font-semibold text-white mb-2">Downloading Resume</h3>
+                <p className="text-white/70 mb-6">Please wait while we prepare your download...</p>
+
+                <div className="space-y-2">
+                  <Progress value={downloadProgress} className="w-full h-2" />
+                  <p className="text-sm text-white/60">{Math.round(downloadProgress)}% complete</p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -inset-10 opacity-50">
@@ -267,15 +427,28 @@ export default function Portfolio() {
               ))}
             </div>
 
-            <Button
-              onClick={() => setShowAdmin(true)}
-              variant="outline"
-              size="sm"
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              Admin
-            </Button>
+            <div className="flex items-center gap-3">
+              {profileData.resume.enabled && (
+                <Button
+                  onClick={handleDownloadResume}
+                  disabled={isDownloading}
+                  className="bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg disabled:opacity-50"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  {profileData.resume.buttonText}
+                </Button>
+              )}
+
+              <Button
+                onClick={() => setShowAdmin(true)}
+                variant="outline"
+                size="sm"
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Admin
+              </Button>
+            </div>
           </div>
         </div>
       </motion.nav>
@@ -304,6 +477,19 @@ export default function Portfolio() {
                   <Mail className="w-5 h-5" />
                   Get In Touch
                 </motion.a>
+
+                {profileData.resume.enabled && (
+                  <motion.button
+                    onClick={handleDownloadResume}
+                    disabled={isDownloading}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-full font-medium hover:shadow-lg transition-shadow disabled:opacity-50"
+                  >
+                    <Download className="w-5 h-5" />
+                    {profileData.resume.buttonText}
+                  </motion.button>
+                )}
 
                 <motion.a
                   href={`https://${profileData.github}`}
